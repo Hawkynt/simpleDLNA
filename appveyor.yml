@@ -1,0 +1,10 @@
+image: Visual Studio 2017
+
+init:
+  - cmd: git config --global core.autocrlf false
+
+before_build:
+  - cmd: dotnet --info
+
+build_script:
+  - cmd: MSBuild.exe sdlna.sln /m /t:Clean,Build /p:Configuration=Release /p:DebugSymbols=false /p:DebugType=None
