@@ -1,10 +1,12 @@
 image: Visual Studio 2017
+configuration: Release
 
 init:
   - cmd: git config --global core.autocrlf false
 
 before_build:
   - cmd: dotnet --info
+  - cmd: dotnet restore --no-cache
 
 build_script:
   - cmd: MSBuild.exe sdlna.sln /m /t:Clean,Build /p:Configuration=Release /p:DebugSymbols=false /p:DebugType=None
