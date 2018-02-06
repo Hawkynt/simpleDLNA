@@ -9,4 +9,5 @@ before_build:
   - cmd: dotnet restore --no-cache
 
 build_script:
+  - cmd: nuget resore
   - cmd: MSBuild.exe sdlna.sln /m /t:Clean,Build /p:Configuration=Release /p:DebugSymbols=false /p:DebugType=None
