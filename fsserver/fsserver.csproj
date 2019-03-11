@@ -80,6 +80,7 @@
     <Compile Include="Files\Cover.cs" />
     <Compile Include="Files\FileStoreVacuumer.cs" />
     <Compile Include="Files\ImageFile.cs" />
+    <Compile Include="Files\NFOFileReader.cs" />
     <Compile Include="Files\TagLibFileAbstraction.cs" />
     <Compile Include="Files\TVDBStore.cs" />
     <Compile Include="Files\VideoFile.cs" />

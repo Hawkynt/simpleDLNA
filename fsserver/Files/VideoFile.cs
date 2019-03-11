@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization;
+using NMaier.SimpleDlna.FileMediaServer.Files;
 using NMaier.SimpleDlna.Server;
 using NMaier.SimpleDlna.Utilities;
 using TagLib;
@@ -44,6 +47,36 @@ namespace NMaier.SimpleDlna.FileMediaServer {
     private VideoFile(SerializationInfo info, StreamingContext ctx): this(info, ctx.Context as DeserializeInfo) { }
 
     private void FetchTV() {
+
+      var movieInfo= NFOFileReader.ReadMovieOrDefault(this.Item);
+      if (movieInfo != null) {
+        this.title = movieInfo.Title;
+        this.description=movieInfo.Plot;
+        this.duration = movieInfo.Duration;
+        this.actors=movieInfo.Actors;
+        this.director=movieInfo.Director;
+        this.genre=movieInfo.Genres?.FirstOrDefault();
+        this.isSeries = false;
+        return;
+      }
+
+      var episodeInfo = NFOFileReader.ReadEpisodeOrDefault(this.Item);
+      if (episodeInfo != null) {
+        var showInfo = NFOFileReader.ReadShowOrDefault(this.Item.Directory) ?? NFOFileReader.ReadShowOrDefault(this.Item.Directory?.Parent) ?? NFOFileReader.ReadShowOrDefault(this.Item.Directory?.Parent?.Parent);
+
+        this.title = episodeInfo.Title;
+        this.description = episodeInfo.Plot;
+        this.duration = episodeInfo.Duration;
+        this.actors = showInfo.Actors;
+        this.director = episodeInfo.Director;
+        this.genre = showInfo.Genres?.FirstOrDefault();
+        this.episode = episodeInfo.Episode;
+        this.season = episodeInfo.Season;
+        this.seriesname = showInfo.Title?? episodeInfo.ShowTitle;
+        this.isSeries = true;
+        return;
+      }
+      
       try {
         if (this.tvshowid == null || this.tvshowid == -1)
           this.tvshowid = TheTVDB.GetTVShowID(this.Path);
