@@ -51,6 +51,7 @@
     <Compile Include="AddressToMacResolver.cs" />
     <Compile Include="BaseSortPart.cs" />
     <Compile Include="ConcatenatedStream.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="FFmpeg.cs" />
     <Compile Include="Formatting.cs" />
     <Compile Include="GlobalSuppressions.cs" />

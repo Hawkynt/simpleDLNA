@@ -2,8 +2,10 @@ using NMaier.SimpleDlna.Server;
 using NMaier.SimpleDlna.Server.Metadata;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using NMaier.SimpleDlna.Utilities;
 
 namespace NMaier.SimpleDlna.FileMediaServer
 {
@@ -92,9 +94,21 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
     }
 
+
+    private static readonly string[] _EXCLUDED_ROOT_DIRECTORY_NAMES =  {"System Volume Information","$RECYCLE.BIN" };
+
     private PlainFolder TryGetFolder(FileServer server, DlnaMediaTypes types,
                                      DirectoryInfo d)
     {
+
+      // HAWKYNT: exclude recycle bin and system volume information
+      if (d.Parent.IsRoot()) {
+        if (_EXCLUDED_ROOT_DIRECTORY_NAMES.Any(i => i == d.Name)) {
+          Trace.WriteLine($"[Info]Skipping {d.FullName} because it is blacklisted");
+          return null;
+        }
+      }
+
       try {
         return new PlainFolder(server, types, this, d);
       }
