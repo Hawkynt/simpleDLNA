@@ -208,7 +208,7 @@ namespace NMaier.SimpleDlna.Utilities {
       return true;
     }
 
-    public static NiceName TryGetName(this string name) {
+    public static NiceName GetNiceNameOrNull(this string name) {
       var releaser = releaserRegex.Match(name);
       var releaserText = string.Empty;
       if (releaser.Success)

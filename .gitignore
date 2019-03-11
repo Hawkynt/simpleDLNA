@@ -12,3 +12,4 @@ pages/
 cov-int*
 .idea
 .vscode
+.vs/
