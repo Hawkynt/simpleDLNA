@@ -1,349 +1,293 @@
-﻿using NMaier.SimpleDlna.Server;
 using System;
 using System.IO;
 using System.Runtime.Serialization;
+using NMaier.SimpleDlna.Server;
+using TagLib;
+using File = System.IO.File;
 
-namespace NMaier.SimpleDlna.FileMediaServer
-{
+namespace NMaier.SimpleDlna.FileMediaServer {
   [Serializable]
   internal sealed class AudioFile
-    : BaseFile, IMediaAudioResource, ISerializable
-  {
-    private string album;
-
-    private string artist;
-
-    private string description;
-
-    private TimeSpan? duration;
+    : BaseFile, IMediaAudioResource, ISerializable {private string album;
 
     private static readonly TimeSpan EmptyDuration = new TimeSpan(0);
-
+    private string artist;
+    private string description;
+    private TimeSpan? duration;
     private string genre;
-
-    private bool initialized = false;
-
+    private bool initialized;
     private string performer;
-
     private string title;
-
     private int? track;
 
-    private AudioFile(SerializationInfo info, DeserializeInfo di)
-      : this(di.Server, di.Info, di.Type)
-    {
-      album = info.GetString("al");
-      artist = info.GetString("ar");
-      genre = info.GetString("g");
-      performer = info.GetString("p");
-      title = info.GetString("ti");
+    private AudioFile(SerializationInfo info, DeserializeInfo di): this(di.Server, di.Info, di.Type) {
+      this.album = info.GetString("al");
+      this.artist = info.GetString("ar");
+      this.genre = info.GetString("g");
+      this.performer = info.GetString("p");
+      this.title = info.GetString("ti");
       try {
-        track = info.GetInt32("tr");
-      }
-      catch (Exception) {
+        this.track = info.GetInt32("tr");
+      } catch (Exception) {
         // no op
       }
+
       var ts = info.GetInt64("d");
-      if (ts > 0) {
-        duration = new TimeSpan(ts);
-      }
-      initialized = true;
+      if (ts > 0)
+        this.duration = new TimeSpan(ts);
+
+      this.initialized = true;
     }
 
-    private AudioFile(SerializationInfo info, StreamingContext ctx)
-      :
-      this(info, ctx.Context as DeserializeInfo)
-    {
-    }
+    private AudioFile(SerializationInfo info, StreamingContext ctx):this(info, ctx.Context as DeserializeInfo) { }
 
-    internal AudioFile(FileServer server, FileInfo aFile, DlnaMime aType)
-      : base(server, aFile, aType, DlnaMediaTypes.Audio)
-    {
-    }
+    internal AudioFile(FileServer server, FileInfo aFile, DlnaMime aType): base(server, aFile, aType, DlnaMediaTypes.Audio) { }
 
-    public override IMediaCoverResource Cover
-    {
-      get
-      {
-        if (cover == null && !LoadCoverFromCache()) {
-          MaybeInit();
-        }
-        return cover;
+    public override IMediaCoverResource Cover {
+      get {
+        if (this.cover == null && !this.LoadCoverFromCache())
+          this.MaybeInit();
+
+        return this.cover;
       }
     }
 
-    public string MetaAlbum
-    {
-      get
-      {
-        MaybeInit();
-        return album;
+    public string MetaAlbum {
+      get {
+        this.MaybeInit();
+        return this.album;
       }
     }
 
-    public string MetaArtist
-    {
-      get
-      {
-        MaybeInit();
-        return artist;
+    public string MetaArtist {
+      get {
+        this.MaybeInit();
+        return this.artist;
       }
     }
 
-    public string MetaDescription
-    {
-      get
-      {
-        MaybeInit();
-        return description;
+    public string MetaDescription {
+      get {
+        this.MaybeInit();
+        return this.description;
       }
     }
 
-    public TimeSpan? MetaDuration
-    {
-      get
-      {
-        MaybeInit();
-        return duration;
+    public TimeSpan? MetaDuration {
+      get {
+        this.MaybeInit();
+        return this.duration;
       }
     }
 
-    public string MetaGenre
-    {
-      get
-      {
-        MaybeInit();
-        return genre;
+    public string MetaGenre {
+      get {
+        this.MaybeInit();
+        return this.genre;
       }
     }
 
-    public string MetaPerformer
-    {
-      get
-      {
-        MaybeInit();
-        return performer;
+    public string MetaPerformer {
+      get {
+        this.MaybeInit();
+        return this.performer;
       }
     }
 
-    public int? MetaTrack
-    {
-      get
-      {
-        MaybeInit();
-        return track;
+    public int? MetaTrack {
+      get {
+        this.MaybeInit();
+        return this.track;
       }
     }
 
-    public override IHeaders Properties
-    {
-      get
-      {
-        MaybeInit();
+    public override IHeaders Properties {
+      get {
+        this.MaybeInit();
         var rv = base.Properties;
-        if (album != null) {
-          rv.Add("Album", album);
-        }
-        if (artist != null) {
-          rv.Add("Artist", artist);
-        }
-        if (description != null) {
-          rv.Add("Description", description);
-        }
-        if (duration != null) {
-          rv.Add("Duration", duration.Value.ToString("g"));
-        }
-        if (genre != null) {
-          rv.Add("Genre", genre);
-        }
-        if (performer != null) {
-          rv.Add("Performer", performer);
-        }
-        if (track != null) {
-          rv.Add("Track", track.Value.ToString());
-        }
+        if (this.album != null)
+          rv.Add("Album", this.album);
+
+        if (this.artist != null)
+          rv.Add("Artist", this.artist);
+
+        if (this.description != null)
+          rv.Add("Description", this.description);
+
+        if (this.duration != null)
+          rv.Add("Duration", this.duration.Value.ToString("g"));
+
+        if (this.genre != null)
+          rv.Add("Genre", this.genre);
+
+        if (this.performer != null)
+          rv.Add("Performer", this.performer);
+
+        if (this.track != null)
+          rv.Add("Track", this.track.Value.ToString());
+
         return rv;
       }
     }
 
-    public override string Title
-    {
-      get
-      {
-        MaybeInit();
-        if (!string.IsNullOrWhiteSpace(title)) {
-          if (track.HasValue) {
-            return string.Format(
-              "{0:D2}. — {1}",
-              track.Value,
-              title
-              );
-          }
-          return title;
-        }
-        return base.Title;
+    public override string Title {
+      get {
+        this.MaybeInit();
+        if (string.IsNullOrWhiteSpace(this.title))
+          return base.Title;
+
+        return
+          this.track.HasValue
+          ? $"{this.track.Value:D2}. — {this.title}"
+          : this.title
+        ;
       }
     }
 
-    private void InitCover(TagLib.Tag tag)
-    {
-      TagLib.IPicture pic = null;
+    private void InitCover(Tag tag) {
+      IPicture pic = null;
       foreach (var p in tag.Pictures) {
-        if (p.Type == TagLib.PictureType.FrontCover) {
+        if (p.Type == PictureType.FrontCover) {
           pic = p;
           break;
         }
+
         switch (p.Type) {
-          case TagLib.PictureType.Other:
-          case TagLib.PictureType.OtherFileIcon:
-          case TagLib.PictureType.FileIcon:
+          case PictureType.Other:
+          case PictureType.OtherFileIcon:
+          case PictureType.FileIcon:
             pic = p;
             break;
           default:
-            if (pic == null) {
+            if (pic == null)
               pic = p;
-            }
+
             break;
         }
       }
-      if (pic != null) {
+
+      if (pic != null)
         try {
-          cover = new Cover(Item, pic.Data.ToStream());
+          this.cover = new Cover(this.Item, pic.Data.ToStream());
+        } catch (Exception ex) {
+          this.Debug($"Failed to generate thumb for {this.Item.FullName}", ex);
         }
-        catch (Exception ex) {
-          Debug("Failed to generate thumb for " + Item.FullName, ex);
+      else
+        try {
+          var path = System.IO.Path.Combine(this.Item.Directory?.FullName??string.Empty, "folder.jpg");
+          if (File.Exists(path))
+            using (var stream = File.OpenRead(path))
+              this.cover = new Cover(this.Item, stream);
+
+        } catch (Exception ex) {
+          this.Debug("Failed to generate thumb for " + this.Item.FullName, ex);
         }
-      }
     }
 
-    private void MaybeInit()
-    {
-      if (initialized) {
+    private void MaybeInit() {
+      if (this.initialized)
         return;
-      }
 
       try {
-        using (var tl = TagLib.File.Create(new TagLibFileAbstraction(Item))) {
+        using (var tl = TagLib.File.Create(new TagLibFileAbstraction(this.Item))) {
           try {
-            duration = tl.Properties.Duration;
-            if (duration.HasValue && duration.Value.TotalSeconds < 0.1) {
-              duration = null;
-            }
-          }
-          catch (Exception ex) {
-            Debug("Failed to transpose Properties props", ex);
+            this.duration = tl.Properties.Duration;
+            if (this.duration.Value.TotalSeconds < 0.1)
+              this.duration = null;
+
+          } catch (Exception ex) {
+            this.Debug("Failed to transpose Properties props", ex);
           }
 
           try {
             var t = tl.Tag;
-            SetProperties(t);
-            InitCover(t);
-          }
-          catch (Exception ex) {
-            Debug("Failed to transpose Tag props", ex);
+            this.SetProperties(t);
+            this.InitCover(t);
+          } catch (Exception ex) {
+            this.Debug("Failed to transpose Tag props", ex);
           }
         }
 
-        initialized = true;
+        this.initialized = true;
+        this.Server.UpdateFileCache(this);
 
-        Server.UpdateFileCache(this);
-      }
-      catch (TagLib.CorruptFileException ex) {
-        Debug(
-          "Failed to read meta data via taglib for file " + Item.FullName, ex);
-        initialized = true;
-      }
-      catch (TagLib.UnsupportedFormatException ex) {
-        Debug(
-          "Failed to read meta data via taglib for file " + Item.FullName, ex);
-        initialized = true;
-      }
-      catch (Exception ex) {
-        Warn(
-          "Unhandled exception reading meta data for file " + Item.FullName,
-          ex);
+      } catch (CorruptFileException ex) {
+        this.Debug($"Failed to read meta data via taglib for file {this.Item.FullName}", ex);
+        this.initialized = true;
+      } catch (UnsupportedFormatException ex) {
+        this.Debug($"Failed to read meta data via taglib for file {this.Item.FullName}", ex);
+        this.initialized = true;
+      } catch (Exception ex) {
+        this.Warn($"Unhandled exception reading meta data for file {this.Item.FullName}",ex);
       }
     }
 
-    private void SetProperties(TagLib.Tag tag)
-    {
-      genre = tag.FirstGenre;
-      if (string.IsNullOrWhiteSpace(genre)) {
-        genre = null;
-      }
+    private void SetProperties(Tag tag) {
+      this.genre = tag.FirstGenre;
+      if (string.IsNullOrWhiteSpace(this.genre))
+        this.genre = null;
 
-      if (tag.Track != 0 && tag.Track < (1 << 10)) {
-        track = (int)tag.Track;
-      }
+      if (tag.Track != 0 && tag.Track < 1 << 10)
+        this.track = (int) tag.Track;
+      
+      this.title = tag.Title;
+      if (string.IsNullOrWhiteSpace(this.title))
+        this.title = null;
 
+      this.description = tag.Comment;
+      if (string.IsNullOrWhiteSpace(this.description))
+        this.description = null;
 
-      title = tag.Title;
-      if (string.IsNullOrWhiteSpace(title)) {
-        title = null;
-      }
+      this.performer =
+        string.IsNullOrWhiteSpace(this.artist)
+        ? tag.JoinedPerformers
+        : tag.JoinedPerformersSort
+      ;
 
-      description = tag.Comment;
-      if (string.IsNullOrWhiteSpace(description)) {
-        description = null;
-      }
+      if (string.IsNullOrWhiteSpace(this.performer))
+        this.performer = null;
 
-      if (string.IsNullOrWhiteSpace(artist)) {
-        performer = tag.JoinedPerformers;
-      }
-      else {
-        performer = tag.JoinedPerformersSort;
-      }
-      if (string.IsNullOrWhiteSpace(performer)) {
-        performer = null;
-      }
+      this.artist = tag.JoinedAlbumArtists;
+      if (string.IsNullOrWhiteSpace(this.artist))
+        this.artist = tag.JoinedComposers;
 
-      artist = tag.JoinedAlbumArtists;
-      if (string.IsNullOrWhiteSpace(artist)) {
-        artist = tag.JoinedComposers;
-      }
-      if (string.IsNullOrWhiteSpace(artist)) {
-        artist = null;
-      }
+      if (string.IsNullOrWhiteSpace(this.artist))
+        this.artist = null;
 
-      album = tag.AlbumSort;
-      if (string.IsNullOrWhiteSpace(album)) {
-        album = tag.Album;
-      }
-      if (string.IsNullOrWhiteSpace(album)) {
-        album = null;
-      }
+      this.album = tag.AlbumSort;
+      if (string.IsNullOrWhiteSpace(this.album))
+        this.album = tag.Album;
+
+      if (string.IsNullOrWhiteSpace(this.album))
+        this.album = null;
     }
 
-    public override int CompareTo(IMediaItem other)
-    {
-      if (track.HasValue) {
-        var oa = other as AudioFile;
-        int rv;
-        if (oa != null && oa.track.HasValue &&
-          (rv = track.Value.CompareTo(oa.track.Value)) != 0) {
-          return rv;
-        }
-      }
+    public override int CompareTo(IMediaItem other) {
+      if (!this.track.HasValue)
+        return base.CompareTo(other);
+
+      var oa = other as AudioFile;
+      int rv;
+      if (oa?.track != null && (rv = this.track.Value.CompareTo(oa.track.Value)) != 0)
+        return rv;
+
       return base.CompareTo(other);
     }
 
-    public void GetObjectData(SerializationInfo info, StreamingContext ctx)
-    {
-      if (info == null) {
-        throw new ArgumentNullException("info");
-      }
-      info.AddValue("al", album);
-      info.AddValue("ar", artist);
-      info.AddValue("g", genre);
-      info.AddValue("p", performer);
-      info.AddValue("ti", title);
-      info.AddValue("tr", track);
-      info.AddValue(
-        "d", duration.GetValueOrDefault(EmptyDuration).Ticks);
+    public void GetObjectData(SerializationInfo info, StreamingContext ctx) {
+      if (info == null)
+        throw new ArgumentNullException(nameof(info));
+
+      info.AddValue("al", this.album);
+      info.AddValue("ar", this.artist);
+      info.AddValue("g", this.genre);
+      info.AddValue("p", this.performer);
+      info.AddValue("ti", this.title);
+      info.AddValue("tr", this.track);
+      info.AddValue("d", this.duration.GetValueOrDefault(EmptyDuration).Ticks);
     }
 
-    public override void LoadCover()
-    {
+    public override void LoadCover() {
       // No op
     }
   }
