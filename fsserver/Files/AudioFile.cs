@@ -7,10 +7,10 @@ using File = System.IO.File;
 
 namespace NMaier.SimpleDlna.FileMediaServer {
   [Serializable]
-  internal sealed class AudioFile
-    : BaseFile, IMediaAudioResource, ISerializable {private string album;
-
+  internal sealed class AudioFile: BaseFile, IMediaAudioResource, ISerializable {
+    
     private static readonly TimeSpan EmptyDuration = new TimeSpan(0);
+    private string album;
     private string artist;
     private string description;
     private TimeSpan? duration;
