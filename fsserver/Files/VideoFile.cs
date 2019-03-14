@@ -23,7 +23,7 @@ namespace NMaier.SimpleDlna.FileMediaServer {
     private TimeSpan? duration;
     private string genre;
     private int? height;
-    private bool initialized;
+    private bool _isMetaDataInitialized;
     private Subtitle subTitle;
     private string title;
     private int? width;
@@ -57,6 +57,7 @@ namespace NMaier.SimpleDlna.FileMediaServer {
         this.director=movieInfo.Director;
         this.genre=movieInfo.Genres?.FirstOrDefault();
         this.isSeries = false;
+        this._MarkMetaDataInitialized();
         return;
       }
 
@@ -74,6 +75,7 @@ namespace NMaier.SimpleDlna.FileMediaServer {
         this.season = episodeInfo.Season;
         this.seriesname = showInfo.Title?? episodeInfo.ShowTitle;
         this.isSeries = true;
+        this._MarkMetaDataInitialized();
         return;
       }
       
@@ -180,7 +182,7 @@ namespace NMaier.SimpleDlna.FileMediaServer {
       }
 
       this.Server.UpdateFileCache(this);
-      this.initialized = true;
+      this._isMetaDataInitialized = true;
     }
 
     internal VideoFile(FileServer server, FileInfo aFile, DlnaMime aType): base(server, aFile, aType, DlnaMediaTypes.Video) { }
@@ -336,10 +338,13 @@ namespace NMaier.SimpleDlna.FileMediaServer {
     }
 
     private void MaybeInit() {
-      if (this.initialized)
+      if (this._isMetaDataInitialized)
         return;
 
       this.FetchTV();
+      if (this._isMetaDataInitialized)
+        return;
+
       try {
         using (var tl = File.Create(new TagLibFileAbstraction(this.Item))) {
           try {
@@ -375,18 +380,21 @@ namespace NMaier.SimpleDlna.FileMediaServer {
           }
         }
 
-        this.initialized = true;
-
-        this.Server.UpdateFileCache(this);
+        this._MarkMetaDataInitialized();
       } catch (CorruptFileException ex) {
         this.Debug("Failed to read meta data via taglib for file " + this.Item.FullName, ex);
-        this.initialized = true;
+        this._isMetaDataInitialized = true;
       } catch (UnsupportedFormatException ex) {
         this.Debug("Failed to read meta data via taglib for file " + this.Item.FullName, ex);
-        this.initialized = true;
+        this._isMetaDataInitialized = true;
       } catch (Exception ex) {
         this.Warn("Unhandled exception reading meta data for file " + this.Item.FullName,ex);
       }
+    }
+
+    private void _MarkMetaDataInitialized() {
+      this._isMetaDataInitialized = true;
+      this.Server.UpdateFileCache(this);
     }
 
     public void GetObjectData(SerializationInfo info, StreamingContext context) {
